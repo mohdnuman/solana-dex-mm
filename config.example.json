@@ -1,0 +1,14 @@
+{
+  "dex": "",
+  "tokenAddress": "",
+  "poolAddress": "",
+  "bias": 0,
+  "tradesPerCycle": 0,
+  "volumePerMinute": 0,
+  "wallets": [
+    {
+      "address": "",
+      "privateKey": ""
+    }
+  ]
+}

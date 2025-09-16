@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
-    "start:build": "tsc -w",
-    "start:run": "nodemon dist/index.js",
-    "start": "concurrently npm:start:*"
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
