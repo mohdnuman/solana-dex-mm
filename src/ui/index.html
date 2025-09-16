@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Config Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 40px);
+            max-width: 100%;
+        }
+        .left-panel {
+            flex: 0 0 25%;
+            display: flex;
+            flex-direction: column;
+        }
+        .right-panel {
+            flex: 1;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .config-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .wallet-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .wallet-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+        }
+        .wallet-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .config-section h2 {
+            margin-top: 0;
+            color: #555;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .wallet-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .wallet-table th,
+        .wallet-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .wallet-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+        }
+        .wallet-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+        }
+        .balance {
+            font-weight: bold;
+        }
+        .sol-balance {
+            color: #007bff;
+        }
+        .token-balance {
+            color: #28a745;
+        }
+        .no-wallets {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="config-section">
+                <h2>Volume Strategy Configuration</h2>
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="bias">Bias:</label>
+                        <input type="number" id="bias" name="bias" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradesPerCycle">Trades Per Cycle:</label>
+                        <input type="number" id="tradesPerCycle" name="tradesPerCycle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="volumePerMinute">Volume Per Minute:</label>
+                        <input type="number" id="volumePerMinute" name="volumePerMinute" step="0.1" required>
+                    </div>
+                    <button type="button" class="btn" onclick="updateConfig()">Update Configuration</button>
+                    <button type="button" class="btn btn-secondary" onclick="loadConfig()">Refresh</button>
+                </form>
+                <div id="configStatus" class="status"></div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="wallet-section">
+                <div class="wallet-header">
+                    <h2>💰 Wallet List</h2>
+                    <button type="button" class="btn btn-secondary" onclick="loadWallets()">Refresh Wallets</button>
+                </div>
+                <div class="wallet-content" id="walletTableContainer">
+                    <div class="no-wallets">Loading wallets...</div>
+                </div>
+                <div id="walletStatus" class="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load configuration and wallets on page load
+        window.onload = function() {
+            loadConfig();
+            loadWallets();
+        };
+
+        function showStatus(elementId, message, isError = false) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.textContent = message;
+            statusEl.className = `status ${isError ? 'error' : 'success'}`;
+            statusEl.style.display = 'block';
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+        }
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                document.getElementById('bias').value = config.bias || 0.5;
+                document.getElementById('tradesPerCycle').value = config.tradesPerCycle || 1;
+                document.getElementById('volumePerMinute').value = config.volumePerMinute || 0.1;
+                
+                showStatus('configStatus', 'Configuration loaded successfully!');
+            } catch (error) {
+                showStatus('configStatus', 'Failed to load configuration: ' + error.message, true);
+            }
+        }
+
+        async function updateConfig() {
+            try {
+                const formData = new FormData(document.getElementById('configForm'));
+                const config = Object.fromEntries(formData);
+                
+                // Convert numeric values
+                config.bias = parseFloat(config.bias);
+                config.tradesPerCycle = parseInt(config.tradesPerCycle);
+                config.volumePerMinute = parseFloat(config.volumePerMinute);
+
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(config),
+                });
+
+                if (response.ok) {
+                    showStatus('configStatus', 'Configuration updated successfully!');
+                } else {
+                    throw new Error('Failed to update configuration');
+                }
+            } catch (error) {
+                showStatus('configStatus', 'Failed to update configuration: ' + error.message, true);
+            }
+        }
+
+        async function loadWallets() {
+            try {
+                const response = await fetch('/api/wallets');
+                const wallets = await response.json();
+
+                const container = document.getElementById('walletTableContainer');
+
+                if (!wallets || wallets.length === 0) {
+                    container.innerHTML = '<div class="no-wallets">No wallets found</div>';
+                    return;
+                }
+
+                const tableHtml = `
+                    <table class="wallet-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Wallet Address</th>
+                                <th>SOL Balance</th>
+                                <th>Token Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${wallets.map((wallet, index) => `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td class="wallet-address">${wallet.address || 'N/A'}</td>
+                                    <td class="balance sol-balance">${(wallet.solBalance || 0).toFixed(6)} SOL</td>
+                                    <td class="balance token-balance">${(wallet.tokenBalance || 0).toFixed(6)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+                container.innerHTML = tableHtml;
+                showStatus('walletStatus', `Loaded ${wallets.length} wallets successfully!`);
+            } catch (error) {
+                document.getElementById('walletTableContainer').innerHTML = '<div class="no-wallets">Failed to load wallets</div>';
+                showStatus('walletStatus', 'Failed to load wallets: ' + error.message, true);
+            }
+        }
+    </script>
+</body>
+</html>

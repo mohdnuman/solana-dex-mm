@@ -1,0 +1,18 @@
+{
+  "dex": "",
+  "tokenAddress": "",
+  "poolAddress": "",
+  "bias": 1,
+  "tradesPerCycle": 1,
+  "volumePerMinute": 0.1,
+  "wallets": [
+    {
+      "address": "HKpxsTuC1yseBbDCbiEWf6xvoGYWYSKQzTiexi3t4rXg",
+      "privateKey": "2Yf39cPiDhoh7RMxts54ZNHUG3F9phuPj28YvxZpHVAeXUKRqgq4mPpoqoLnCT3BKQvo5xANMpqfFmTk8rKpPL2z"
+    },
+    {
+      "address": "DxEirTyHEvp49UVVSgESYhoK6fFobtdgfr3JvbDNqz2S",
+      "privateKey": "3YbYxnW14PCxxvMJRbKMCPeDqvBj7S51A9vwDnQmT4xHdKTd7g6VkZfdYXZjSG4mqpx1iHWZU6wTTdS4E4w6HhrW"
+    }
+  ]
+}
