@@ -1,9 +1,17 @@
-import _ from "lodash";
-
 import helperLib from "../lib/helper.lib";
 import loggerLib from "../lib/logger.lib";
 
 import raydiumClmmDex from "../dex/raydium.clmm.dex";
+
+interface Wallet {
+  address: string;
+  privateKey: string;
+}
+
+interface WalletGroup {
+  name: string;
+  wallets: Wallet[];
+}
 
 export default class MakerStrategy {
   configProvider: any;
@@ -18,13 +26,23 @@ export default class MakerStrategy {
     while (this.isRunning) {
       const config = this.configProvider.getConfig();
 
-      for (const wallet of config.wallets) {
-        await raydiumClmmDex.executeTransferAndSwap(
-          config.masterWallet.privateKey,
+      if (config.makerStrategy.isRunning === false) {
+        await helperLib.sleep(5000);
+        continue;
+      }
+
+      const groupName = config.makerStrategy.makerStratWalletGroupName;
+      const walletGroup = config.walletGroups.find(
+        (group: WalletGroup) => group.name === groupName,
+      );
+
+      for (const wallet of walletGroup.wallets) {
+        const txId = await raydiumClmmDex.executeTransferAndSwap(
+          config.makerStrategy.masterWallet.privateKey,
           wallet.privateKey,
           config.poolAddress,
-          config.transferAmountSol,
-          config.amountToSwapSol,
+          config.makerStrategy.amountToTransfer,
+          config.makerStrategy.amountToSwap,
         );
 
         loggerLib.logInfo({
@@ -32,14 +50,19 @@ export default class MakerStrategy {
           action: "Executed transfer and swap",
           wallet: wallet.address,
           pool: config.poolAddress,
-          transferAmountSol: config.transferAmountSol,
-          amountToSwapSol: config.amountToSwapSol,
-          walletIndex: config.wallets.indexOf(wallet) + 1,
-          totalWallets: config.wallets.length,
+          transferAmountSol: config.makerStrategy.transferAmountSol,
+          amountToTransfer: config.makerStrategy.amountToTransfer,
+          walletIndex: walletGroup.wallets.indexOf(wallet) + 1,
+          totalWallets: walletGroup.wallets.length,
+          txId: txId,
         });
       }
 
-      await helperLib.sleep(1000);
+      loggerLib.logInfo({
+        strategy: "MakerStrategy",
+        action: "Cycle complete, exiting the strategy",
+      });
+      this.stop();
     }
   };
 

@@ -1,14 +1,34 @@
 {
+  "uiPort": 3000,
   "dex": "",
   "tokenAddress": "",
   "poolAddress": "",
-  "bias": 0,
-  "tradesPerCycle": 0,
-  "volumePerMinute": 0,
-  "wallets": [
-    {
+  "volumeStrategy": {
+    "bias": 0,
+    "tradesPerCycle": 0,
+    "volumePerMinute": 0,
+    "volumeStratWalletGroupName": "",
+    "isRunning": true
+  },
+  "makerStrategy": {
+    "masterWallet": {
       "address": "",
       "privateKey": ""
+    },
+    "amountToTransfer": 0.03,
+    "amountToSwap": 0.01,
+    "makerStratWalletGroupName": "",
+    "isRunning": true
+  },
+  "walletGroups": [
+    {
+      "name": "",
+      "wallets": [
+        {
+          "address": "",
+          "privateKey": ""
+        }
+      ]
     }
   ]
 }
