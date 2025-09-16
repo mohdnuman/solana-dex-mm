@@ -11,7 +11,6 @@ const SOL_REQUIRED_FOR_GAS: number = 0.001;
 
 export default class VolumeStrategy {
   configProvider: any;
-  isRunning: boolean = false;
 
   constructor(configProvider: any) {
     this.configProvider = configProvider;
@@ -19,11 +18,10 @@ export default class VolumeStrategy {
 
   start = async () => {
     try {
-      this.isRunning = true;
-      while (this.isRunning) {
+      while (true) {
         const config = this.configProvider.getConfig();
 
-        if (config.volumeStrategy.isRunning === false) {
+        if (!config.volumeStrategy.isEnabled) {
           await helperLib.sleep(5000);
           continue;
         }
@@ -119,10 +117,6 @@ export default class VolumeStrategy {
     } catch (error) {
       throw error;
     }
-  };
-
-  stop = () => {
-    this.isRunning = false;
   };
 
   splitVolumeIntoAmounts = (volume: number, tradeCount: number) => {

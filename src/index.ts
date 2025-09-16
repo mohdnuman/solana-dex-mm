@@ -23,8 +23,8 @@ import MakerStrategy from "./strategy/maker.strategy";
     const volumeStrategy = new VolumeStrategy(configProvider);
     volumeStrategy.start();
 
-    const makerStrategy = new MakerStrategy(configProvider);
-    makerStrategy.start();
+    // const makerStrategy = new MakerStrategy(configProvider);
+    // makerStrategy.start();
   } catch (error) {
     loggerLib.logError(error);
     process.exit(1);

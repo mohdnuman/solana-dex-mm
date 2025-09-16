@@ -15,18 +15,16 @@ interface WalletGroup {
 
 export default class MakerStrategy {
   configProvider: any;
-  isRunning: boolean = false;
 
   constructor(configProvider: any) {
     this.configProvider = configProvider;
   }
 
   start = async () => {
-    this.isRunning = true;
-    while (this.isRunning) {
+    while (true) {
       const config = this.configProvider.getConfig();
 
-      if (config.makerStrategy.isRunning === false) {
+      if (!config.makerStrategy.isEnabled) {
         await helperLib.sleep(5000);
         continue;
       }
@@ -62,11 +60,6 @@ export default class MakerStrategy {
         strategy: "MakerStrategy",
         action: "Cycle complete, exiting the strategy",
       });
-      this.stop();
     }
-  };
-
-  stop = () => {
-    this.isRunning = false;
   };
 }

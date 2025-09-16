@@ -8,7 +8,7 @@
     "tradesPerCycle": 0,
     "volumePerMinute": 0,
     "volumeStratWalletGroupName": "",
-    "isRunning": true
+    "isEnabled": true
   },
   "makerStrategy": {
     "masterWallet": {
@@ -18,7 +18,7 @@
     "amountToTransfer": 0.03,
     "amountToSwap": 0.01,
     "makerStratWalletGroupName": "",
-    "isRunning": true
+    "isEnabled": true
   },
   "walletGroups": [
     {
