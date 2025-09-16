@@ -24,7 +24,8 @@
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "lodash": "^4.17.21",
-    "numan-logger": "^1.2.0"
+    "numan-logger": "^1.2.0",
+    "prettier": "^3.6.2"
   },
   "devDependencies": {
     "@types/bn.js": "^5.2.0",

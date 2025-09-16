@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meme Config Dashboard</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+      .container {
+        display: flex;
+        gap: 20px;
+        height: calc(100vh - 40px);
+        max-width: 100%;
+      }
+      .left-panel {
+        flex: 0 0 25%;
+        display: flex;
+        flex-direction: column;
+      }
+      .right-panel {
+        flex: 1;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .config-section {
+        margin-bottom: 20px;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background-color: white;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .wallet-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .wallet-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #007bff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .wallet-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 10px;
+      }
+      .wallet-group {
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+      }
+      .wallet-group-header {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 8px 8px 0 0;
+      }
+      .wallet-group-header:hover {
+        background-color: #e9ecef;
+      }
+      .wallet-group-title {
+        font-weight: bold;
+        color: #333;
+      }
+      .wallet-group-stats {
+        font-size: 12px;
+        color: #666;
+      }
+      .wallet-group-content {
+        padding: 15px;
+        display: none;
+      }
+      .wallet-group.expanded .wallet-group-content {
+        display: block;
+      }
+      .expand-icon {
+        transition: transform 0.3s ease;
+      }
+      .wallet-group.expanded .expand-icon {
+        transform: rotate(90deg);
+      }
+      .wallet-group-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .export-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-right: 10px;
+      }
+      .export-btn:hover {
+        background-color: #218838;
+      }
+      .add-wallets-btn {
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-right: 10px;
+      }
+      .add-wallets-btn:hover {
+        background-color: #138496;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+      .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 10px;
+        width: 400px;
+        max-width: 90%;
+      }
+      .modal h3 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 1;
+      }
+      .close:hover {
+        color: #000;
+      }
+      .config-section h2 {
+        margin-top: 0;
+        color: #555;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+      }
+      input, select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+      input:focus, select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+      }
+      .btn {
+        background-color: #007bff;
+        color: white;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 10px;
+        margin-bottom: 5px;
+      }
+      .btn:hover {
+        background-color: #0056b3;
+      }
+      .btn-secondary {
+        background-color: #6c757d;
+      }
+      .btn-secondary:hover {
+        background-color: #545b62;
+      }
+      .status {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 5px;
+        display: none;
+      }
+      .status.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .wallet-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+      .wallet-table th,
+      .wallet-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      .wallet-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        color: #555;
+      }
+      .wallet-table tr:hover {
+        background-color: #f5f5f5;
+      }
+      .wallet-address {
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        color: #666;
+      }
+      .balance {
+        font-weight: bold;
+      }
+      .sol-balance {
+        color: #007bff;
+      }
+      .token-balance {
+        color: #28a745;
+      }
+      .no-wallets {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        padding: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="left-panel">
+        <div class="config-section">
+          <h2>Volume Strategy Configuration</h2>
+          <form id="configForm">
+            <div class="form-group">
+              <label for="bias">Bias:</label>
+              <input type="number" id="bias" name="bias" step="0.1" required />
+            </div>
+            <div class="form-group">
+              <label for="tradesPerCycle">Trades Per Cycle:</label>
+              <input
+                type="number"
+                id="tradesPerCycle"
+                name="tradesPerCycle"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="volumePerMinute">Volume Per Minute:</label>
+              <input
+                type="number"
+                id="volumePerMinute"
+                name="volumePerMinute"
+                step="0.1"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="volumeStratWalletGroupName">Wallet Group:</label>
+              <select id="volumeStratWalletGroupName" name="volumeStratWalletGroupName">
+                <option value="">All Groups (Default)</option>
+              </select>
+            </div>
+            <button type="button" class="btn" onclick="updateConfig()">
+              Update Configuration
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="loadConfig()"
+            >
+              Refresh
+            </button>
+          </form>
+          <div id="configStatus" class="status"></div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div class="wallet-section">
+          <div class="wallet-header">
+            <div>
+              <h2>👥 Wallet Groups</h2>
+            </div>
+            <div>
+              <button type="button" class="btn" onclick="showAddGroupModal()">
+                Add Group
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="loadWalletGroups()"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+          <div class="wallet-content" id="walletGroupsContainer">
+            <div class="no-wallets">Loading wallet groups...</div>
+          </div>
+          <div id="walletStatus" class="status"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Group Modal -->
+    <div id="addGroupModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeAddGroupModal()">&times;</span>
+        <h3>Add New Wallet Group</h3>
+        <form id="addGroupForm">
+          <div class="form-group">
+            <label for="groupName">Group Name:</label>
+            <input type="text" id="groupName" name="groupName" required />
+          </div>
+          <div class="form-group">
+            <label for="walletCount">Number of Wallets:</label>
+            <input type="number" id="walletCount" name="walletCount" min="1" max="100" value="5" required />
+          </div>
+          <button type="button" class="btn" onclick="createWalletGroup()">
+            Create Group
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="closeAddGroupModal()">
+            Cancel
+          </button>
+        </form>
+        <div id="modalStatus" class="status"></div>
+      </div>
+    </div>
+
+    <!-- Add Wallets Modal -->
+    <div id="addWalletsModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeAddWalletsModal()">&times;</span>
+        <h3>Add Wallets to Group</h3>
+        <p>Adding wallets to: <strong id="targetGroupName"></strong></p>
+        <form id="addWalletsForm">
+          <div class="form-group">
+            <label for="addWalletCount">Number of Wallets to Add:</label>
+            <input type="number" id="addWalletCount" name="addWalletCount" min="1" max="50" value="5" required />
+          </div>
+          <button type="button" class="btn" onclick="addWalletsToGroup()">
+            Add Wallets
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="closeAddWalletsModal()">
+            Cancel
+          </button>
+        </form>
+        <div id="addWalletsModalStatus" class="status"></div>
+      </div>
+    </div>
+
+    <script>
+      let availableGroupNames = [];
+
+      // Load configuration and wallet groups on page load
+      window.onload = function () {
+        loadConfig();
+        loadWalletGroups();
+      };
+
+      function showStatus(elementId, message, isError = false) {
+        const statusEl = document.getElementById(elementId);
+        statusEl.textContent = message;
+        statusEl.className = `status ${isError ? "error" : "success"}`;
+        statusEl.style.display = "block";
+        setTimeout(() => {
+          statusEl.style.display = "none";
+        }, 3000);
+      }
+
+      async function loadConfig() {
+        try {
+          const response = await fetch("/api/config");
+          const config = await response.json();
+
+          document.getElementById("bias").value = config.bias || 0.5;
+          document.getElementById("tradesPerCycle").value = config.tradesPerCycle || 1;
+          document.getElementById("volumePerMinute").value = config.volumePerMinute || 0.1;
+
+          // Update wallet group dropdown
+          await loadWalletGroups();
+          const walletGroupSelect = document.getElementById("volumeStratWalletGroupName");
+          walletGroupSelect.value = config.volumeStratWalletGroupName || "";
+
+          showStatus("configStatus", "Configuration loaded successfully!");
+        } catch (error) {
+          showStatus("configStatus", "Failed to load configuration: " + error.message, true);
+        }
+      }
+
+      async function updateConfig() {
+        try {
+          const formData = new FormData(document.getElementById("configForm"));
+          const config = Object.fromEntries(formData);
+
+          // Convert numeric values
+          config.bias = parseFloat(config.bias);
+          config.tradesPerCycle = parseInt(config.tradesPerCycle);
+          config.volumePerMinute = parseFloat(config.volumePerMinute);
+
+          const response = await fetch("/api/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(config),
+          });
+
+          if (response.ok) {
+            showStatus("configStatus", "Configuration updated successfully!");
+          } else {
+            throw new Error("Failed to update configuration");
+          }
+        } catch (error) {
+          showStatus("configStatus", "Failed to update configuration: " + error.message, true);
+        }
+      }
+
+      async function loadWalletGroups() {
+        try {
+          const response = await fetch("/api/wallet-groups");
+          const data = await response.json();
+          availableGroupNames = data.availableGroupNames || [];
+
+          // Update wallet group dropdown in config
+          const walletGroupSelect = document.getElementById("volumeStratWalletGroupName");
+          walletGroupSelect.innerHTML = '<option value="">All Groups (Default)</option>';
+          availableGroupNames.forEach(groupName => {
+            const option = document.createElement("option");
+            option.value = groupName;
+            option.textContent = groupName;
+            walletGroupSelect.appendChild(option);
+          });
+
+          const container = document.getElementById("walletGroupsContainer");
+
+          if (!data.walletGroups || data.walletGroups.length === 0) {
+            container.innerHTML = '<div class="no-wallets">No wallet groups found. Create one to get started!</div>';
+            return;
+          }
+
+          const groupsHtml = data.walletGroups.map(group => `
+            <div class="wallet-group" id="group-${group.name}">
+              <div class="wallet-group-header">
+                <div onclick="toggleWalletGroup('${group.name}')" style="flex: 1; cursor: pointer;">
+                  <div class="wallet-group-title">${group.name}</div>
+                  <div class="wallet-group-stats">
+                    ${group.walletCount} wallets •
+                    ${group.totalSolBalance.toFixed(4)} SOL •
+                    ${group.totalTokenBalance.toFixed(4)} tokens
+                  </div>
+                </div>
+                <div class="wallet-group-actions">
+                  <button class="add-wallets-btn" onclick="showAddWalletsModal('${group.name}')" title="Add More Wallets">➕ Add</button>
+                  <button class="export-btn" onclick="exportWalletGroup('${group.name}')" title="Export Private Keys">📥 Export</button>
+                  <span class="expand-icon" onclick="toggleWalletGroup('${group.name}')" style="cursor: pointer;">▶</span>
+                </div>
+              </div>
+              <div class="wallet-group-content">
+                <table class="wallet-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Wallet Address</th>
+                      <th>SOL Balance</th>
+                      <th>Token Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${group.wallets.map((wallet, index) => `
+                      <tr>
+                        <td>${index + 1}</td>
+                        <td class="wallet-address">${wallet.address}</td>
+                        <td class="balance sol-balance">${(wallet.solBalance || 0).toFixed(6)} SOL</td>
+                        <td class="balance token-balance">${(wallet.tokenBalance || 0).toFixed(6)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `).join('');
+
+          container.innerHTML = groupsHtml;
+          showStatus("walletStatus", `Loaded ${data.walletGroups.length} wallet groups successfully!`);
+        } catch (error) {
+          document.getElementById("walletGroupsContainer").innerHTML = '<div class="no-wallets">Failed to load wallet groups</div>';
+          showStatus("walletStatus", "Failed to load wallet groups: " + error.message, true);
+        }
+      }
+
+      function toggleWalletGroup(groupName) {
+        const groupElement = document.getElementById(`group-${groupName}`);
+        groupElement.classList.toggle('expanded');
+      }
+
+      function showAddGroupModal() {
+        document.getElementById("addGroupModal").style.display = "block";
+        document.getElementById("groupName").value = "";
+        document.getElementById("walletCount").value = "5";
+      }
+
+      function closeAddGroupModal() {
+        document.getElementById("addGroupModal").style.display = "none";
+      }
+
+      async function createWalletGroup() {
+        try {
+          const groupName = document.getElementById("groupName").value.trim();
+          const walletCount = parseInt(document.getElementById("walletCount").value);
+
+          if (!groupName) {
+            showStatus("modalStatus", "Please enter a group name", true);
+            return;
+          }
+
+          if (availableGroupNames.includes(groupName)) {
+            showStatus("modalStatus", "Group name already exists", true);
+            return;
+          }
+
+          if (!walletCount || walletCount < 1 || walletCount > 100) {
+            showStatus("modalStatus", "Wallet count must be between 1 and 100", true);
+            return;
+          }
+
+          const response = await fetch("/api/wallet-groups", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ groupName, walletCount }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            showStatus("modalStatus", result.message);
+            setTimeout(() => {
+              closeAddGroupModal();
+              loadWalletGroups();
+            }, 1500);
+          } else {
+            const error = await response.json();
+            showStatus("modalStatus", error.error, true);
+          }
+        } catch (error) {
+          showStatus("modalStatus", "Failed to create wallet group: " + error.message, true);
+        }
+      }
+
+      async function exportWalletGroup(groupName) {
+        try {
+          showStatus("walletStatus", `Exporting private keys for group '${groupName}'...`);
+
+          const response = await fetch(`/api/wallet-groups/${encodeURIComponent(groupName)}/export`);
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Export failed');
+          }
+
+          // Create blob and download file
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `${groupName}_private_keys.txt`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          showStatus("walletStatus", `Successfully exported private keys for group '${groupName}'`);
+        } catch (error) {
+          showStatus("walletStatus", `Failed to export group '${groupName}': ${error.message}`, true);
+        }
+      }
+
+      let currentTargetGroupName = "";
+
+      function showAddWalletsModal(groupName) {
+        currentTargetGroupName = groupName;
+        document.getElementById("targetGroupName").textContent = groupName;
+        document.getElementById("addWalletsModal").style.display = "block";
+        document.getElementById("addWalletCount").value = "5";
+      }
+
+      function closeAddWalletsModal() {
+        document.getElementById("addWalletsModal").style.display = "none";
+        currentTargetGroupName = "";
+      }
+
+      async function addWalletsToGroup() {
+        try {
+          const walletCount = parseInt(document.getElementById("addWalletCount").value);
+
+          if (!walletCount || walletCount < 1 || walletCount > 50) {
+            showStatus("addWalletsModalStatus", "Wallet count must be between 1 and 50", true);
+            return;
+          }
+
+          showStatus("addWalletsModalStatus", `Adding ${walletCount} wallets to '${currentTargetGroupName}'...`);
+
+          const response = await fetch(`/api/wallet-groups/${encodeURIComponent(currentTargetGroupName)}/add-wallets`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ walletCount }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            showStatus("addWalletsModalStatus", result.message);
+            setTimeout(() => {
+              closeAddWalletsModal();
+              loadWalletGroups();
+            }, 1500);
+          } else {
+            const error = await response.json();
+            showStatus("addWalletsModalStatus", error.error, true);
+          }
+        } catch (error) {
+          showStatus("addWalletsModalStatus", "Failed to add wallets: " + error.message, true);
+        }
+      }
+
+      // Close modal when clicking outside of it
+      window.onclick = function(event) {
+        const addGroupModal = document.getElementById("addGroupModal");
+        const addWalletsModal = document.getElementById("addWalletsModal");
+
+        if (event.target === addGroupModal) {
+          closeAddGroupModal();
+        } else if (event.target === addWalletsModal) {
+          closeAddWalletsModal();
+        }
+      };
+    </script>
+  </body>
+</html>

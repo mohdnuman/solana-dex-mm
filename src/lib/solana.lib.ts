@@ -1,9 +1,19 @@
 import _ from "lodash";
 import bs58 from "bs58";
-import {ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID} from "@solana/spl-token";
-import {Connection, Keypair, PublicKey, TransactionMessage, VersionedTransaction} from "@solana/web3.js";
+import {
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import {
+    Connection,
+    Keypair,
+    PublicKey,
+    TransactionMessage,
+    VersionedTransaction,
+} from "@solana/web3.js";
 
 import globalLib from "./global.lib";
+import loggerLib from "./logger.lib";
 import globalKeyEnum from "../enum/global.key.enum";
 
 const MAX_ACCOUNTS_PER_MULTI_REQUEST = 100;
@@ -14,7 +24,7 @@ function connectToCluster(rpcUrl: string) {
         new Connection(rpcUrl, "confirmed"),
     );
 
-    console.log(`Connected to solana cluster!`);
+    loggerLib.logInfo(`Connected to solana cluster!`);
 }
 
 function isConnectionEstablished() {
@@ -49,7 +59,10 @@ function getAssociatedTokenAccountAddress(
             );
         }
 
-        if (!allowOwnerOffCurve && !PublicKey.isOnCurve(ownerPublicKey.toBuffer())) {
+        if (
+            !allowOwnerOffCurve &&
+            !PublicKey.isOnCurve(ownerPublicKey.toBuffer())
+        ) {
             throw new Error("Owner is off curve");
         }
 
@@ -68,7 +81,11 @@ function getAssociatedTokenAccountAddress(
     }
 }
 
-async function getSignedTransaction(instructions: any[], payer: Keypair, signers: Keypair[]): Promise<any> {
+async function getSignedTransaction(
+    instructions: any[],
+    payer: Keypair,
+    signers: Keypair[],
+): Promise<any> {
     try {
         if (_.isEmpty(instructions) || _.isEmpty(payer) || _.isEmpty(signers)) {
             throw new Error(
@@ -151,7 +168,10 @@ async function getBatchSolBalance(walletAddresses: string[]) {
     }
 }
 
-async function getBatchTokenBalance(walletAddresses: string[], tokenMintAddress: string) {
+async function getBatchTokenBalance(
+    walletAddresses: string[],
+    tokenMintAddress: string,
+) {
     try {
         if (_.isEmpty(walletAddresses) || _.isEmpty(tokenMintAddress)) {
             throw new Error(
@@ -194,15 +214,31 @@ async function getBatchTokenBalance(walletAddresses: string[], tokenMintAddress:
     }
 }
 
+function generateWallet() {
+    try {
+        const keypair = Keypair.generate();
+
+        const address = keypair.publicKey.toBase58();
+        const privateKey = bs58.encode(keypair.secretKey);
+
+        return {
+            address: address,
+            privateKey: privateKey,
+        };
+    } catch (error) {
+        throw error;
+    }
+}
 
 export default {
     getPayer: getPayer,
     getTokenInfo: getTokenInfo,
     getConnection: getConnection,
+    generateWallet: generateWallet,
     connectToCluster: connectToCluster,
     getBatchSolBalance: getBatchSolBalance,
     getBatchTokenBalance: getBatchTokenBalance,
     getSignedTransaction: getSignedTransaction,
     isConnectionEstablished: isConnectionEstablished,
     getAssociatedTokenAccountAddress: getAssociatedTokenAccountAddress,
-}
+};

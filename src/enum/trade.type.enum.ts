@@ -1,6 +1,6 @@
-const tradeTypeEnum=Object.freeze({
-    BUY:"BUY",
-    SELL:"SELL"
-})
+const tradeTypeEnum = Object.freeze({
+  BUY: "BUY",
+  SELL: "SELL",
+});
 
 export default tradeTypeEnum;
