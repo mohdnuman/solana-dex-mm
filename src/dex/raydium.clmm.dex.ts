@@ -2,11 +2,18 @@ import BN from "bn.js";
 import _ from "lodash";
 import Decimal from "decimal.js";
 import { createCloseAccountInstruction } from "@solana/spl-token";
-import { Raydium, TxVersion, PoolUtils } from "@raydium-io/raydium-sdk-v2";
+import {
+  Raydium,
+  TxVersion,
+  PoolUtils,
+  TickArray,
+} from "@raydium-io/raydium-sdk-v2";
 import {
   PublicKey,
   LAMPORTS_PER_SOL,
   ComputeBudgetProgram,
+  Keypair,
+  SystemProgram,
 } from "@solana/web3.js";
 
 import solanaLib from "../lib/solana.lib";
@@ -430,6 +437,144 @@ async function sell(
   }
 }
 
+async function buildSwapBuilder(
+  walletPrivateKey: string,
+  poolAddress: string,
+  amountOfSol: number,
+  slippage: number = 0.5,
+) {
+  const raydium = await initSdk();
+
+  const poolKeys = await getPoolKeys(poolAddress);
+  const poolInfo = await getPoolInfo(poolAddress);
+
+  const payer: Keypair = solanaLib.getPayer(walletPrivateKey);
+
+  if (
+    poolInfo["mintA"].address !== globalConst.WSOL_ADDRESS &&
+    poolInfo["mintB"].address !== globalConst.WSOL_ADDRESS
+  ) {
+    throw new Error(`Pool is not a WSOL pool! poolAddress: ${poolAddress}`);
+  }
+
+  const clmmPoolInfo = await PoolUtils.fetchComputeClmmInfo({
+    connection: raydium.connection,
+    poolInfo,
+  });
+
+  const tickCache = await PoolUtils.fetchMultiplePoolTickArrays({
+    connection: raydium.connection,
+    poolKeys: [clmmPoolInfo],
+  });
+
+  const baseToken =
+    poolInfo["mintA"].address === globalConst.WSOL_ADDRESS
+      ? poolInfo["mintB"]
+      : poolInfo["mintA"];
+
+  const amountLamports = new BN(amountOfSol * LAMPORTS_PER_SOL);
+
+  const { minAmountOut, remainingAccounts } = PoolUtils.computeAmountOutFormat({
+    poolInfo: clmmPoolInfo,
+    tickArrayCache: tickCache[poolAddress] as { [key: string]: TickArray },
+    amountIn: amountLamports,
+    tokenOut: baseToken,
+    slippage: slippage / 100, // user passes percent normally
+    epochInfo: await raydium.fetchEpochInfo(),
+  });
+
+  raydium.setOwner(payer);
+
+  const { builder } = await raydium.clmm.swap({
+    poolInfo,
+    poolKeys,
+    inputMint: globalConst.WSOL_ADDRESS,
+    amountIn: amountLamports,
+    amountOutMin: minAmountOut.amount.raw,
+    observationId: new PublicKey(poolKeys.observationId),
+    ownerInfo: {
+      useSOLBalance: true,
+      feePayer: payer.publicKey,
+    },
+    remainingAccounts,
+    txVersion: TxVersion.V0,
+    associatedOnly: true,
+    checkCreateATAOwner: true,
+  });
+
+  return {
+    builder,
+    minAmountOut,
+    remainingAccounts,
+    poolInfo,
+    poolKeys,
+    clmmPoolInfo,
+  };
+}
+
+async function executeTransferAndSwap(
+  masterPrivateKey: string,
+  childPrivateKey: string,
+  poolAddress: string,
+  transferAmountSol: number,
+  amountToSwapSol: number,
+  slippagePercent = 50,
+): Promise<void> {
+  try {
+    if (_.isNil(masterPrivateKey) || _.isNil(childPrivateKey)) {
+      throw new Error("Missing master or child wallets");
+    }
+
+    const connection = solanaLib.getConnection();
+
+    const masterKeypair: Keypair = solanaLib.getPayer(masterPrivateKey);
+
+    const childKeypair: Keypair = solanaLib.getPayer(childPrivateKey);
+
+    const transferLamports = new BN(
+      Math.floor(transferAmountSol * LAMPORTS_PER_SOL),
+    );
+
+    const { builder } = await buildSwapBuilder(
+      childPrivateKey,
+      poolAddress,
+      amountToSwapSol,
+      slippagePercent,
+    );
+
+    // @ts-ignore
+    const { instructions: swapInstructions, endInstructions } = builder;
+
+    const transferInstruction = SystemProgram.transfer({
+      fromPubkey: masterKeypair.publicKey,
+      toPubkey: childKeypair.publicKey,
+      lamports: transferLamports.toNumber(),
+    });
+
+    const transactionInstructions = [
+      ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: 200_000,
+      }),
+      ComputeBudgetProgram.setComputeUnitLimit({
+        units: 200_000,
+      }),
+      transferInstruction,
+      ...swapInstructions,
+      ...endInstructions,
+    ];
+
+    const tx = await solanaLib.getSignedTransaction(
+      transactionInstructions,
+      masterKeypair,
+      [masterKeypair, childKeypair],
+    );
+
+    return await connection.sendTransaction(tx);
+  } catch (error) {
+    throw error;
+  }
+}
+
 export default {
   buy: buy,
   sell: sell,
@@ -437,4 +582,5 @@ export default {
   getPoolInfo: getPoolInfo,
   getTokenAmountToSellToGetGivenSolAmount:
     getTokenAmountToSellToGetGivenSolAmount,
+  executeTransferAndSwap: executeTransferAndSwap,
 };
