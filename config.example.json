@@ -4,31 +4,18 @@
   "tokenAddress": "",
   "poolAddress": "",
   "volumeStrategy": {
+    "isEnabled": false,
     "bias": 0,
     "tradesPerCycle": 0,
     "volumePerMinute": 0,
-    "volumeStratWalletGroupName": "",
-    "isEnabled": true
+    "walletGroupName": "default"
   },
   "makerStrategy": {
-    "masterWallet": {
-      "address": "",
-      "privateKey": ""
-    },
-    "amountToTransfer": 0.03,
-    "amountToSwap": 0.01,
-    "makerStratWalletGroupName": "",
-    "isEnabled": true
+    "isEnabled": false,
+    "masterWalletPrivateKey": "",
+    "amountToTransfer": 0,
+    "amountToSwap": 0,
+    "walletGroupName": "default"
   },
-  "walletGroups": [
-    {
-      "name": "",
-      "wallets": [
-        {
-          "address": "",
-          "privateKey": ""
-        }
-      ]
-    }
-  ]
+  "walletGroups": []
 }

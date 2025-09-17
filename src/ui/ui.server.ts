@@ -1,3 +1,4 @@
+import _ from "lodash";
 import cors from "cors";
 import path from "path";
 import express from "express";
@@ -6,231 +7,190 @@ import loggerLib from "../lib/logger.lib";
 import ConfigProvider from "../config/config.provider";
 
 export default class UiServer {
-  constructor(configProvider: ConfigProvider) {
-    const app = express();
+    constructor(configProvider: ConfigProvider) {
+        const app = express();
 
-    app.use(cors());
-    app.use(express.json());
-    app.use(express.static(path.join(__dirname)));
+        app.use(cors());
+        app.use(express.json());
+        app.use(express.static(path.join(__dirname)));
 
-    app.get("/", (req, res) => {
-      return res.sendFile(path.join(__dirname, "../../public/index.html"));
-    });
-
-    app.get("/api/config", (req, res) => {
-      try {
-        const config = configProvider.getConfig();
-        const editableConfig = {
-          bias: config.bias,
-          tradesPerCycle: config.tradesPerCycle,
-          volumePerMinute: config.volumePerMinute,
-          volumeStratWalletGroupName: config.volumeStratWalletGroupName,
-        };
-        return res.status(200).json(editableConfig);
-      } catch (error) {
-        loggerLib.logError(error);
-        return res.status(500).json({ error: "Failed to load configuration" });
-      }
-    });
-
-    app.post("/api/config", (req, res) => {
-      try {
-        const allowedFields = [
-          "bias",
-          "tradesPerCycle",
-          "volumePerMinute",
-          "volumeStratWalletGroupName",
-        ];
-        const updateData: any = {};
-
-        for (const field of allowedFields) {
-          if (req.body[field] !== undefined) {
-            updateData[field] = req.body[field];
-          }
-        }
-
-        configProvider.updateConfig(updateData);
-        return res.json({
-          success: true,
-          message: "Configuration updated successfully",
+        app.get("/", (req, res) => {
+            return res.sendFile(path.join(__dirname, "../../public/index.html"));
         });
-      } catch (error) {
-        loggerLib.logError(error);
-        return res
-          .status(500)
-          .json({ error: "Failed to update configuration" });
-      }
-    });
 
-    app.get("/api/wallet-groups", (req, res) => {
-      try {
-        const config = configProvider.getConfig();
-        const walletGroups = config.walletGroups || [];
-        const walletGroupNames = configProvider.getWalletGroupNames();
-
-        const groupsWithStats = walletGroups.map((group: any) => ({
-          name: group.name,
-          walletCount: group.wallets.length,
-          totalSolBalance: group.wallets.reduce(
-            (sum: number, wallet: any) => sum + (wallet.solBalance || 0),
-            0,
-          ),
-          totalTokenBalance: group.wallets.reduce(
-            (sum: number, wallet: any) => sum + (wallet.tokenBalance || 0),
-            0,
-          ),
-          wallets: group.wallets,
-        }));
-
-        return res.status(200).json({
-          walletGroups: groupsWithStats,
-          availableGroupNames: walletGroupNames,
+        app.get("/api/config", (req, res) => {
+            try {
+                const config = configProvider.getConfig();
+                const editableConfig = {
+                    volumeStrategy: config.volumeStrategy,
+                    makerStrategy: config.makerStrategy,
+                };
+                return res.status(200).json(editableConfig);
+            } catch (error) {
+                loggerLib.logError(error);
+                return res.status(500).json({error: "Failed to load configuration"});
+            }
         });
-      } catch (error) {
-        loggerLib.logError(error);
-        return res.status(500).json({ error: "Failed to load wallet groups" });
-      }
-    });
 
-    app.post("/api/wallet-groups", (req, res) => {
-      try {
-        const { groupName, walletCount } = req.body;
+        app.post("/api/config", (req, res) => {
+            try {
+                const updateData: any = {};
 
-        if (
-          !groupName ||
-          typeof groupName !== "string" ||
-          groupName.trim() === ""
-        ) {
-          return res.status(400).json({
-            error: "Group name is required and must be a non-empty string",
-          });
-        }
+                if (req.body.volumeStrategy) {
+                    updateData.volumeStrategy = req.body.volumeStrategy;
+                }
 
-        if (
-          !walletCount ||
-          typeof walletCount !== "number" ||
-          walletCount < 1 ||
-          walletCount > 100
-        ) {
-          return res
-            .status(400)
-            .json({ error: "Wallet count must be a number between 1 and 100" });
-        }
+                if (req.body.makerStrategy) {
+                    updateData.makerStrategy = req.body.makerStrategy;
+                }
 
-        const trimmedGroupName = groupName.trim();
-        const newGroup = configProvider.createWalletGroup(
-          trimmedGroupName,
-          walletCount,
-        );
-
-        return res.status(201).json({
-          success: true,
-          message: `Created wallet group '${trimmedGroupName}' with ${walletCount} wallets`,
-          group: {
-            name: newGroup.name,
-            walletCount: newGroup.wallets.length,
-            totalSolBalance: 0,
-            totalTokenBalance: 0,
-          },
+                configProvider.updateConfig(updateData);
+                return res.status(200).json({
+                    message: "Configuration updated successfully",
+                });
+            } catch (error) {
+                loggerLib.logError(error);
+                return res
+                    .status(500)
+                    .json({error: "Failed to update configuration"});
+            }
         });
-      } catch (error) {
-        loggerLib.logError(error);
-        if (
-          error instanceof Error &&
-          error.message.includes("already exists")
-        ) {
-          return res.status(409).json({ error: error.message });
-        }
-        return res.status(500).json({ error: "Failed to create wallet group" });
-      }
-    });
 
-    app.get("/api/wallet-groups/:groupName/export", (req, res) => {
-      try {
-        const { groupName } = req.params;
-        const config = configProvider.getConfig();
-        const group = config.walletGroups.find(
-          (g: any) => g.name === groupName,
-        );
+        app.get("/api/wallet-groups", (req, res) => {
+            try {
+                const walletGroups = configProvider.getWalletGroups();
 
-        if (!group) {
-          return res.status(404).json({ error: "Wallet group not found" });
-        }
+                const walletGroupsWithStats = walletGroups.map((group: any) => ({
+                    name: group.name,
+                    walletCount: group.wallets.length,
+                    totalSolBalance: group.wallets.reduce(
+                        (sum: number, wallet: any) => sum + (wallet.solBalance || 0),
+                        0,
+                    ),
+                    totalTokenBalance: group.wallets.reduce(
+                        (sum: number, wallet: any) => sum + (wallet.tokenBalance || 0),
+                        0,
+                    ),
+                    wallets: group.wallets,
+                }));
 
-        // Extract private keys
-        const privateKeys = group.wallets.map(
-          (wallet: any) => wallet.privateKey,
-        );
-        const privateKeysText = privateKeys.join("\n");
-
-        // Set headers for file download
-        res.setHeader("Content-Type", "text/plain");
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="${groupName}_private_keys.txt"`,
-        );
-
-        return res.send(privateKeysText);
-      } catch (error) {
-        loggerLib.logError(error);
-        return res.status(500).json({ error: "Failed to export wallet group" });
-      }
-    });
-
-    app.post("/api/wallet-groups/:groupName/add-wallets", (req, res) => {
-      try {
-        const { groupName } = req.params;
-        const { walletCount } = req.body;
-
-        if (
-          !walletCount ||
-          typeof walletCount !== "number" ||
-          walletCount < 1 ||
-          walletCount > 50
-        ) {
-          return res
-            .status(400)
-            .json({ error: "Wallet count must be a number between 1 and 50" });
-        }
-
-        const updatedGroup = configProvider.addWalletsToGroup(
-          groupName,
-          walletCount,
-        );
-
-        return res.status(200).json({
-          success: true,
-          message: `Added ${walletCount} wallets to group '${groupName}'`,
-          group: {
-            name: updatedGroup.name,
-            walletCount: updatedGroup.wallets.length,
-            totalSolBalance: updatedGroup.wallets.reduce(
-              (sum: number, wallet: any) => sum + (wallet.solBalance || 0),
-              0,
-            ),
-            totalTokenBalance: updatedGroup.wallets.reduce(
-              (sum: number, wallet: any) => sum + (wallet.tokenBalance || 0),
-              0,
-            ),
-          },
+                return res.status(200).json({
+                    walletGroups: walletGroupsWithStats,
+                });
+            } catch (error) {
+                loggerLib.logError(error);
+                return res.status(500).json({error: "Failed to load wallet groups"});
+            }
         });
-      } catch (error) {
-        loggerLib.logError(error);
-        if (error instanceof Error && error.message.includes("not found")) {
-          return res.status(404).json({ error: error.message });
-        }
-        return res
-          .status(500)
-          .json({ error: "Failed to add wallets to group" });
-      }
-    });
 
-    const { uiPort } = configProvider.getConfig();
-    app.listen(uiPort, () => {
-      loggerLib.logInfo({
-        message: "UI server running!",
-        port: uiPort,
-      });
-    });
-  }
+        app.post("/api/wallet-groups", (req, res) => {
+            try {
+                const {groupName, walletCount} = req.body;
+                if (_.isEmpty(groupName) || _.isNil(walletCount)) {
+                    return res
+                        .status(400)
+                        .json({error: `Missing required fields! groupName: ${groupName} walletCount: ${walletCount}`});
+                }
+
+                const trimmedGroupName = groupName.trim();
+                const newGroup = configProvider.createWalletGroup(
+                    trimmedGroupName,
+                    walletCount,
+                );
+
+                return res.status(200).json({
+                    message: `Created wallet group '${trimmedGroupName}' with ${walletCount} wallets`,
+                    group: {
+                        name: newGroup.name,
+                        walletCount: newGroup.wallets.length,
+                        totalSolBalance: 0,
+                        totalTokenBalance: 0,
+                    },
+                });
+            } catch (error) {
+                loggerLib.logError(error);
+                return res.status(500).json({error: "Failed to create wallet group"});
+            }
+        });
+
+        app.get("/api/wallet-groups/:groupName/export", (req, res) => {
+            try {
+                const {groupName} = req.params;
+                if (_.isEmpty(groupName)) {
+                    return res.status(400).json({error: `Missing params! groupName: ${groupName}`});
+                }
+
+                const {walletGroups} = configProvider.getConfig();
+                const walletGroup = walletGroups.find(
+                    (g: any) => g.name === groupName,
+                );
+                if (!walletGroup) {
+                    return res.status(404).json({error: "Wallet group not found"});
+                }
+
+                const privateKeys = walletGroup.wallets.map(
+                    (wallet: any) => wallet.privateKey,
+                );
+                const privateKeysText = privateKeys.join("\n");
+
+                res.setHeader("Content-Type", "text/plain");
+                res.setHeader(
+                    "Content-Disposition",
+                    `attachment; filename="${groupName}_private_keys.txt"`,
+                );
+
+                return res.status(200).send(privateKeysText);
+            } catch (error) {
+                loggerLib.logError(error);
+                return res.status(500).json({error: "Failed to export wallet group"});
+            }
+        });
+
+        app.post("/api/wallet-groups/:groupName/add-wallets", (req, res) => {
+            try {
+                const {groupName} = req.params;
+                const {walletCount} = req.body;
+                if (_.isEmpty(groupName) || _.isNil(walletCount)) {
+                    return res
+                        .status(400)
+                        .json({error: `Missing required fields! groupName: ${groupName} walletCount: ${walletCount}`});
+                }
+
+                const updatedGroup = configProvider.addWalletsToGroup(
+                    groupName,
+                    walletCount,
+                );
+
+                return res.status(200).json({
+                    success: true,
+                    message: `Added ${walletCount} wallets to group '${groupName}'`,
+                    group: {
+                        name: updatedGroup.name,
+                        walletCount: updatedGroup.wallets.length,
+                        totalSolBalance: updatedGroup.wallets.reduce(
+                            (sum: number, wallet: any) => sum + (wallet.solBalance || 0),
+                            0,
+                        ),
+                        totalTokenBalance: updatedGroup.wallets.reduce(
+                            (sum: number, wallet: any) => sum + (wallet.tokenBalance || 0),
+                            0,
+                        ),
+                    },
+                });
+            } catch (error) {
+                loggerLib.logError(error);
+                return res
+                    .status(500)
+                    .json({error: "Failed to add wallets to group"});
+            }
+        });
+
+        const {uiPort} = configProvider.getConfig();
+        app.listen(uiPort, () => {
+            loggerLib.logInfo({
+                message: "UI server running!",
+                port: uiPort,
+            });
+        });
+    }
 }

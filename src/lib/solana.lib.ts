@@ -1,13 +1,15 @@
 import _ from "lodash";
 import bs58 from "bs58";
 import {
-    ASSOCIATED_TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID, createCloseAccountInstruction,
     TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
-    Connection,
     Keypair,
     PublicKey,
+    Connection,
+    SystemProgram,
+    LAMPORTS_PER_SOL,
     TransactionMessage,
     VersionedTransaction,
 } from "@solana/web3.js";
@@ -230,15 +232,132 @@ function generateWallet() {
     }
 }
 
+function getSolTransferInstruction(from: string, to: string, solAmount: number) {
+    try {
+        if (_.isEmpty(from) || _.isEmpty(to) || _.isNil(solAmount)) {
+            throw new Error(
+                `
+        Missing args! from: ${from} to: ${to} solAmount: ${solAmount}`,
+            );
+        }
+
+        return SystemProgram.transfer({
+            fromPubkey: new PublicKey(from),
+            toPubkey: new PublicKey(to),
+            lamports: Math.floor(solAmount * LAMPORTS_PER_SOL),
+        });
+    } catch (error) {
+        throw error;
+    }
+}
+
+async function transferSol(sourceWalletPrivateKey: string, destinationWalletAddress: string, amount: number) {
+    try {
+        if (
+            _.isEmpty(sourceWalletPrivateKey) ||
+            _.isEmpty(destinationWalletAddress) ||
+            _.isNil(amount)
+        ) {
+            throw new Error(
+                `Missing args! sourceWalletPrivateKey: ${sourceWalletPrivateKey} destinationWalletAddress: ${destinationWalletAddress} amount: ${amount}`,
+            );
+        }
+
+        const sourcePayer = getPayer(sourceWalletPrivateKey);
+        const instruction = getSolTransferInstruction(
+            sourcePayer.publicKey.toBase58(),
+            destinationWalletAddress,
+            amount,
+        );
+
+        const transaction = await getSignedTransaction([instruction], sourcePayer, [
+            sourcePayer,
+        ]);
+
+        const connection = getConnection();
+        return await connection.sendTransaction(transaction);
+    } catch (error) {
+        throw error;
+    }
+}
+
+function getCloseTokenAccountInstruction(
+    ownerAddress: string,
+    tokenAddress: string,
+    destinationAddress: string,
+): any {
+    try {
+        if (
+            _.isEmpty(ownerAddress) ||
+            _.isEmpty(tokenAddress) ||
+            _.isEmpty(destinationAddress)
+        ) {
+            throw new Error(
+                `Missing args! ownerAddress: ${ownerAddress} tokenAddress: ${tokenAddress} destinationAddress: ${destinationAddress}`,
+            );
+        }
+
+        const ownerPublicKey = new PublicKey(ownerAddress);
+        const tokenPublicKey = new PublicKey(tokenAddress);
+        const destinationPublicKey = new PublicKey(destinationAddress);
+
+        const associatedTokenAccount = getAssociatedTokenAccountAddress(
+            tokenPublicKey,
+            ownerPublicKey,
+        );
+        return createCloseAccountInstruction(
+            associatedTokenAccount,
+            destinationPublicKey,
+            ownerPublicKey,
+            [],
+        )
+    } catch (error) {
+        throw error;
+    }
+}
+
+function getAddressFromPrivateKey(privateKey: string): string {
+    try {
+        if (_.isEmpty(privateKey)) {
+            throw new Error(`Missing args! privateKey: ${privateKey}`);
+        }
+
+        const keypair = getPayer(privateKey);
+        return keypair.publicKey.toBase58();
+    } catch (error) {
+        throw error;
+    }
+}
+
+async function sendTransaction(transaction: any, options: any = {}): Promise<string> {
+    try {
+        if (_.isEmpty(transaction)) {
+            throw new Error(`Missing args! transaction: ${transaction}`);
+        }
+
+        const connection = getConnection();
+        return await connection.sendTransaction(transaction, {
+            ...options
+        });
+    } catch (error) {
+        throw error;
+    }
+}
+
 export default {
     getPayer: getPayer,
+    transferSol: transferSol,
     getTokenInfo: getTokenInfo,
     getConnection: getConnection,
     generateWallet: generateWallet,
+    sendTransaction: sendTransaction,
     connectToCluster: connectToCluster,
     getBatchSolBalance: getBatchSolBalance,
     getBatchTokenBalance: getBatchTokenBalance,
     getSignedTransaction: getSignedTransaction,
     isConnectionEstablished: isConnectionEstablished,
+    getAddressFromPrivateKey: getAddressFromPrivateKey,
+    getSolTransferInstruction: getSolTransferInstruction,
+    getCloseTokenAccountInstruction: getCloseTokenAccountInstruction,
     getAssociatedTokenAccountAddress: getAssociatedTokenAccountAddress,
 };

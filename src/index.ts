@@ -6,9 +6,10 @@ dotenv.config({ path: path.join(__dirname, "/../.env") });
 import UiServer from "./ui/ui.server";
 import solanaLib from "./lib/solana.lib";
 import loggerLib from "./lib/logger.lib";
+
 import ConfigProvider from "./config/config.provider";
-import VolumeStrategy from "./strategy/volume.strategy";
 import MakerStrategy from "./strategy/maker.strategy";
+import VolumeStrategy from "./strategy/volume.strategy";
 
 (async () => {
   try {
@@ -23,8 +24,8 @@ import MakerStrategy from "./strategy/maker.strategy";
     const volumeStrategy = new VolumeStrategy(configProvider);
     volumeStrategy.start();
 
-    // const makerStrategy = new MakerStrategy(configProvider);
-    // makerStrategy.start();
+    const makerStrategy = new MakerStrategy(configProvider);
+    makerStrategy.start();
   } catch (error) {
     loggerLib.logError(error);
     process.exit(1);
