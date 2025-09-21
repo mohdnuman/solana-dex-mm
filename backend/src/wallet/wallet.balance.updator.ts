@@ -54,7 +54,7 @@ class WalletBalanceUpdator {
                             }
                         }
                     }));
-                    await mongoLib.bulkWrite(walletModel, walletUpdateOperations);
+                    walletUpdateOperations.length > 0 && await mongoLib.bulkWrite(walletModel, walletUpdateOperations);
 
                     await mongoLib.updateOne(walletGroupModel, {_id: id}, {
                         $set: {

@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Info as InfoIcon } from '@mui/icons-material';
 import { useTaskSchema } from '../hooks/useTaskSchemas';
+import { walletApi, type WalletGroup } from '../services/api';
 
 interface SimpleTaskFormProps {
   taskType: string;
@@ -25,6 +26,21 @@ const SimpleTaskForm: React.FC<SimpleTaskFormProps> = ({
 }) => {
   const { schema, loading: schemaLoading, error: schemaError } = useTaskSchema(taskType);
   const [formData, setFormData] = useState<any>({});
+  const [walletGroups, setWalletGroups] = useState<WalletGroup[]>([]);
+  const [loadingWalletGroups, setLoadingWalletGroups] = useState(false);
+
+  // Fetch wallet groups
+  const fetchWalletGroups = async () => {
+    try {
+      setLoadingWalletGroups(true);
+      const data = await walletApi.getWalletGroups();
+      setWalletGroups(data.walletGroups);
+    } catch (error) {
+      console.error('Failed to fetch wallet groups:', error);
+    } finally {
+      setLoadingWalletGroups(false);
+    }
+  };
 
   // Initialize form data when schema loads
   useEffect(() => {
@@ -48,6 +64,11 @@ const SimpleTaskForm: React.FC<SimpleTaskFormProps> = ({
       setFormData(initialData);
     }
   }, [schema]);
+
+  // Fetch wallet groups when component loads
+  useEffect(() => {
+    fetchWalletGroups();
+  }, []);
 
   // Notify parent when form data changes
   useEffect(() => {
@@ -89,20 +110,72 @@ const SimpleTaskForm: React.FC<SimpleTaskFormProps> = ({
 
   return (
     <Box>
-      <Paper sx={{ p: 3, mb: 3, bgcolor: 'info.main', color: 'info.contrastText' }}>
+      <Paper sx={{ 
+        p: 3, 
+        mb: 3, 
+        backgroundColor: '#1976d2', 
+        color: '#ffffff',
+        border: '1px solid #e0e0e0'
+      }}>
         <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <InfoIcon />
-          <Typography variant="h6">
-            {taskType} Task Configuration (Simple)
+          <InfoIcon sx={{ color: '#ffffff' }} />
+          <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 600 }}>
+            {taskType} Task Configuration
           </Typography>
         </Box>
-        <Typography variant="body2">
+        <Typography variant="body2" sx={{ color: '#ffffff', opacity: 0.9 }}>
           Fill in the required fields below.
         </Typography>
       </Paper>
 
       <Box component="form" noValidate>
         {Object.entries(schema).map(([fieldName, fieldSchema]) => {
+          // Special handling for walletGroupId - show as dropdown
+          if (fieldName === 'walletGroupId') {
+            return (
+              <FormControl key={fieldName} fullWidth margin="normal">
+                <InputLabel>Wallet Group</InputLabel>
+                <Select
+                  value={formData[fieldName] || ''}
+                  label="Wallet Group"
+                  onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                  disabled={loadingWalletGroups}
+                >
+                  {loadingWalletGroups ? (
+                    <MenuItem disabled>
+                      <CircularProgress size={16} sx={{ mr: 1 }} />
+                      Loading wallet groups...
+                    </MenuItem>
+                  ) : walletGroups.length === 0 ? (
+                    <MenuItem disabled>No wallet groups available</MenuItem>
+                  ) : (
+                    walletGroups.map((group) => (
+                      <MenuItem key={group._id} value={group._id} sx={{ py: 1.5 }}>
+                        <Box sx={{ width: '100%' }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {group.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {group.numberOfWallets} wallets • SOL: {group.solBalance.toFixed(4)} • Token: {group.tokenBalance.toFixed(4)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontFamily: 'monospace' }}>
+                            ID: {group._id.slice(0, 8)}...
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+                {fieldSchema.description && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    {fieldSchema.description}
+                  </Typography>
+                )}
+              </FormControl>
+            );
+          }
+
+          // Handle enum fields (like DEX selection)
           if (fieldSchema.type === 'string' && fieldSchema.enum) {
             return (
               <FormControl key={fieldName} fullWidth margin="normal">
@@ -118,10 +191,16 @@ const SimpleTaskForm: React.FC<SimpleTaskFormProps> = ({
                     </MenuItem>
                   ))}
                 </Select>
+                {fieldSchema.description && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    {fieldSchema.description}
+                  </Typography>
+                )}
               </FormControl>
             );
           }
 
+          // Handle number fields
           if (fieldSchema.type === 'number') {
             return (
               <TextField
@@ -159,6 +238,7 @@ const SimpleTaskForm: React.FC<SimpleTaskFormProps> = ({
             );
           }
 
+          // Handle other string fields
           return (
             <TextField
               key={fieldName}
@@ -168,6 +248,7 @@ const SimpleTaskForm: React.FC<SimpleTaskFormProps> = ({
               value={formData[fieldName] || ''}
               onChange={(e) => handleFieldChange(fieldName, e.target.value)}
               helperText={fieldSchema.description}
+              placeholder={fieldSchema.example ? String(fieldSchema.example) : undefined}
             />
           );
         })}

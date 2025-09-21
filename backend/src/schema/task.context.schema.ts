@@ -100,6 +100,20 @@ const taskSchemas: any = {
             description: 'ID of the wallet group to fund',
             example: '507f1f77bcf86cd799439011'
         }
+    },
+    [taskTypeEnum.SWEEP]: {
+        masterWalletAddress: {
+            type: 'string',
+            required: true,
+            description: 'Master wallet address that funds the holder wallets',
+            example: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'
+        },
+        walletGroupId: {
+            type: 'string',
+            required: true,
+            description: 'ID of the wallet group to fund',
+            example: '507f1f77bcf86cd799439011'
+        }
     }
 };
 

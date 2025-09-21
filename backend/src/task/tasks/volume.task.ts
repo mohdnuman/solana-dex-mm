@@ -12,6 +12,7 @@ import loggerLib from "../../lib/logger.lib";
 import walletLib from "../../lib/wallet.lib";
 import solanaLib from "../../lib/solana.lib";
 import dexInterface from "../../dex/interface.dex";
+import encryptionLib from "../../lib/encryption.lib";
 
 import tradeTypeEnum from "../../enum/trade.type.enum";
 import taskStatusEnum from "../../enum/task.status.enum";
@@ -111,13 +112,13 @@ class VolumeTask {
                                     dex,
                                     poolAddress,
                                     amount,
-                                    wallet.privateKey,
+                                    encryptionLib.decrypt(wallet.encryptedPrivateKey),
                                 )
                                 : await dexInterface.sell(
                                     dex,
                                     poolAddress,
                                     amount,
-                                    wallet.privateKey,
+                                    encryptionLib.decrypt(wallet.encryptedPrivateKey),
                                 );
                         loggerLib.logInfo({
                             message: `Trade Executed!`,

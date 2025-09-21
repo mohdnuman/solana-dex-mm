@@ -12,6 +12,7 @@ import helperLib from "../../lib/helper.lib";
 import solanaLib from "../../lib/solana.lib";
 import walletLib from "../../lib/wallet.lib";
 import dexInterface from "../../dex/interface.dex";
+import encryptionLib from "../../lib/encryption.lib";
 
 import taskStatusEnum from "../../enum/task.status.enum";
 
@@ -39,11 +40,9 @@ class MakerTask {
 
                 const {
                     masterWalletAddress,
-                    amountToTransfer,
-                    amountToSwap,
                     walletGroupId
                 } = context;
-                if (_.isNil(masterWalletAddress) || _.isNil(amountToTransfer) || _.isNil(amountToSwap) || _.isNil(walletGroupId)) {
+                if (_.isNil(masterWalletAddress) || _.isNil(walletGroupId)) {
                     throw new Error(`Invalid task context! ${JSON.stringify(context)}`);
                 }
 
@@ -57,79 +56,137 @@ class MakerTask {
                     throw new Error(`Master wallet not found! address: ${masterWalletAddress}`);
                 }
 
-                const masterPayer = solanaLib.getPayer(masterWallet.privateKey);
+                const masterWalletPrivateKey = encryptionLib.decrypt(masterWallet.encryptedPrivateKey)
+                const masterPayer = solanaLib.getPayer(masterWalletPrivateKey);
                 for (const wallet of wallets) {
-                    const makerPayer = solanaLib.getPayer(wallet.privateKey);
+                    const task = await taskLib.getTask(this.id);
 
-                    const fundingTransactionHash = await solanaLib.transferSol(
-                        masterWallet.privateKey,
-                        wallet.address,
+                    const {context} = task;
+                    if (_.isEmpty(context)) {
+                        throw new Error(`Task context is empty! taskId: ${this.id}`);
+                    }
+
+                    const {
                         amountToTransfer,
-                    );
-                    loggerLib.logInfo({
-                        message: "Maker wallet funded!",
-                        address: wallet.address,
-                        amountSol: amountToTransfer,
-                        transactionHash: fundingTransactionHash,
-                    })
-
-                    const buyTransactionHash = await dexInterface.buy(
-                        dex,
-                        poolAddress,
                         amountToSwap,
-                        wallet.privateKey,
-                    );
-                    loggerLib.logInfo({
-                        message: "Maker wallet bought!",
-                        address: wallet.address,
-                        amount: amountToSwap,
-                        transactionHash: buyTransactionHash,
-                    });
+                    } = context;
+                    if (_.isNil(amountToTransfer) || _.isNil(amountToSwap)) {
+                        throw new Error(`Invalid task context! ${JSON.stringify(context)}`);
+                    }
+
+                    const makerPayer = solanaLib.getPayer(encryptionLib.decrypt(wallet.encryptedPrivateKey));
+
+                    try {
+                        const fundingTransactionHash = await solanaLib.transferSol(
+                            masterWalletPrivateKey,
+                            wallet.address,
+                            amountToTransfer,
+                        );
+                        loggerLib.logInfo({
+                            message: "Maker wallet funded!",
+                            address: wallet.address,
+                            amountSol: amountToTransfer,
+                            transactionHash: fundingTransactionHash,
+                        })
+                    } catch (error) {
+                        loggerLib.logError({
+                            message: "Failed to fund maker wallet!",
+                            address: wallet.address,
+                            amountSol: amountToTransfer,
+                            //@ts-ignore
+                            error: error.message,
+                        })
+                        continue;
+                    }
+
+                    try {
+                        const buyTransactionHash = await dexInterface.buy(
+                            dex,
+                            poolAddress,
+                            amountToSwap,
+                            encryptionLib.decrypt(wallet.encryptedPrivateKey),
+                        );
+                        loggerLib.logInfo({
+                            message: "Maker wallet bought!",
+                            address: wallet.address,
+                            amount: amountToSwap,
+                            transactionHash: buyTransactionHash,
+                        });
+                    } catch (error) {
+                        loggerLib.logError({
+                            message: "Failed to buy!",
+                            address: wallet.address,
+                            amount: amountToSwap,
+                            //@ts-ignore
+                            error: error.message,
+                        })
+                        continue;
+                    }
 
                     await helperLib.sleep(3000);
 
-                    let makerTokenBalance = await solanaLib.getBatchTokenBalance([wallet.address], tokenAddress);
-                    makerTokenBalance = makerTokenBalance[0];
-
-                    const sellTransactionHash = await dexInterface.sell(
-                        dex,
-                        poolAddress,
-                        makerTokenBalance,
-                        wallet.privateKey
-                    );
-                    loggerLib.logInfo({
-                        message: "Maker wallet sold!",
-                        address: wallet.address,
-                        amount: makerTokenBalance,
-                        transactionHash: sellTransactionHash,
-                    });
+                    try {
+                        let makerTokenBalance = await solanaLib.getBatchTokenBalance([wallet.address], tokenAddress);
+                        makerTokenBalance = makerTokenBalance[0];
+                        const sellTransactionHash = await dexInterface.sell(
+                            dex,
+                            poolAddress,
+                            makerTokenBalance,
+                            encryptionLib.decrypt(wallet.encryptedPrivateKey)
+                        );
+                        loggerLib.logInfo({
+                            message: "Maker wallet sold!",
+                            address: wallet.address,
+                            amount: makerTokenBalance,
+                            transactionHash: sellTransactionHash,
+                        });
+                    } catch (error) {
+                        loggerLib.logError({
+                            message: "Failed to sell!",
+                            address: wallet.address,
+                            //@ts-ignore
+                            error: error.message,
+                        })
+                        continue;
+                    }
 
                     await helperLib.sleep(3000);
 
-                    let makerSolBalance = await solanaLib.getBatchSolBalance([wallet.address]);
-                    makerSolBalance = makerSolBalance[0];
-                    const closeAccountInstruction = solanaLib.getCloseTokenAccountInstruction(
-                        wallet.address,
-                        tokenAddress,
-                        masterWalletAddress
-                    );
-                    const solTransferInstruction = solanaLib.getSolTransferInstruction(
-                        wallet.address,
-                        masterWalletAddress,
-                        makerSolBalance
-                    );
-                    const solSweepingTransaction = await solanaLib.getSignedTransaction(
-                        [closeAccountInstruction, solTransferInstruction],
-                        masterPayer,
-                        [masterPayer, makerPayer]
-                    );
-                    const sweepingTransactionHash = await solanaLib.sendTransaction(solSweepingTransaction);
-                    loggerLib.logInfo({
-                        message: "Maker wallet swept!",
-                        address: wallet.address,
-                        amountSol: makerSolBalance,
-                        transactionHash: sweepingTransactionHash,
-                    })
+                    try {
+                        let makerSolBalance = await solanaLib.getBatchSolBalance([wallet.address]);
+                        makerSolBalance = makerSolBalance[0];
+                        const closeAccountInstruction = solanaLib.getCloseTokenAccountInstruction(
+                            wallet.address,
+                            tokenAddress,
+                            masterWalletAddress
+                        );
+                        const solTransferInstruction = solanaLib.getSolTransferInstruction(
+                            wallet.address,
+                            masterWalletAddress,
+                            makerSolBalance
+                        );
+                        const solSweepingTransaction = await solanaLib.getSignedTransaction(
+                            [closeAccountInstruction, solTransferInstruction],
+                            masterPayer,
+                            [masterPayer, makerPayer]
+                        );
+                        const sweepingTransactionHash = await solanaLib.sendTransaction(solSweepingTransaction, {
+                            skipPreflight: true,
+                        });
+                        loggerLib.logInfo({
+                            message: "Maker wallet swept!",
+                            address: wallet.address,
+                            amountSol: makerSolBalance,
+                            transactionHash: sweepingTransactionHash,
+                        })
+                    } catch (error) {
+                        loggerLib.logError({
+                            message: "Failed to sweep sol!",
+                            address: wallet.address,
+                            //@ts-ignore
+                            error: error.message,
+                        })
+                    }
                 }
             }
         } catch (error) {
@@ -160,7 +217,7 @@ process.on("unhandledRejection", async (error) => {
     loggerLib.logError(error);
     //@ts-ignore
     await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
-    await taskLib.removeTaskFromPm2(taskId);
+    // await taskLib.removeTaskFromPm2(taskId);
 });
 
 process.on("uncaughtException", async (error) => {
@@ -168,5 +225,5 @@ process.on("uncaughtException", async (error) => {
     loggerLib.logError(error);
     //@ts-ignore
     await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
-    await taskLib.removeTaskFromPm2(taskId);
+    // await taskLib.removeTaskFromPm2(taskId);
 });

@@ -71,7 +71,7 @@ async function exportWalletGroup(req: any, res: any) {
         }
 
         const wallets = await walletLib.getWallets(groupId);
-        const walletPrivateKeys = wallets.map((wallet: any) => wallet.privateKey);
+        const walletPrivateKeys = wallets.map((wallet: any) => wallet.encryptedPrivateKey);
         const walletPrivateKeysText = walletPrivateKeys.join("\n");
 
         res.setHeader("Content-Type", "text/plain");

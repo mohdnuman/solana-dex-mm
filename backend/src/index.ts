@@ -9,7 +9,6 @@ import solanaLib from "./lib/solana.lib";
 import loggerLib from "./lib/logger.lib";
 
 import api from "./api/api";
-import tradeListener from "./listener/trade.listener";
 import taskOrchestrator from "./task/task.orchestrator";
 import walletBalanceUpdator from "./wallet/wallet.balance.updator";
 
@@ -22,7 +21,6 @@ import walletBalanceUpdator from "./wallet/wallet.balance.updator";
     solanaLib.connectToCluster(process.env["SOLANA_RPC_URL"]);
 
     api.init();
-    tradeListener.init()
     taskOrchestrator.init();
     walletBalanceUpdator.init();
   } catch (error) {

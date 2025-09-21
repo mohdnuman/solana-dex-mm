@@ -72,7 +72,7 @@ const TasksPage: React.FC = () => {
   const [jsonFormData, setJsonFormData] = useState('{}');
 
   const { taskTypes, loading: schemasLoading } = useTaskSchemas();
-  const taskStatuses = ['ALL', 'RUNNING', 'PENDING', 'FAILED', 'COMPLETED', 'DELETED'];
+  const taskStatuses = ['ALL', 'RUNNING', 'PENDING', 'FAILED', 'COMPLETED', 'STOPPED', 'DELETED'];
 
   const fetchTasks = async (status?: string) => {
     try {
@@ -190,6 +190,8 @@ const TasksPage: React.FC = () => {
   const handleEditContext = (taskId: string, currentContext: any) => {
     setEditingTask(taskId);
     setEditContext(JSON.stringify(currentContext, null, 2));
+    // Auto-expand the row to show the edit form
+    setExpandedRow(taskId);
   };
 
   const handleSaveContext = async (taskId: string) => {
@@ -233,6 +235,8 @@ const TasksPage: React.FC = () => {
         return <ErrorIcon />;
       case 'COMPLETED':
         return <CheckCircle />;
+      case 'STOPPED':
+        return <Stop />;
       case 'DELETED':
         return <Pause />;
       default:
@@ -250,6 +254,8 @@ const TasksPage: React.FC = () => {
         return 'error';
       case 'COMPLETED':
         return 'info';
+      case 'STOPPED':
+        return 'warning';
       case 'DELETED':
         return 'default';
       default:
@@ -267,6 +273,8 @@ const TasksPage: React.FC = () => {
         return 'info';
       case 'MIXER':
         return 'warning';
+      case "SWEEP":
+        return 'success';
       default:
         return 'default';
     }
@@ -514,17 +522,34 @@ const TasksPage: React.FC = () => {
                                   <Stop />
                                 </IconButton>
                               </Tooltip>
-                              <Tooltip title="Edit Context">
+                              <Tooltip title={editingTask === task._id ? "Editing context..." : "Edit Task Context (Click to expand and edit)"}>
                                 <IconButton
                                   size="small"
+                                  color={editingTask === task._id ? "secondary" : "primary"}
                                   onClick={() => handleEditContext(task._id, task.context)}
+                                  sx={{ 
+                                    '&:hover': { 
+                                      backgroundColor: editingTask === task._id ? 'secondary.main' : 'primary.main',
+                                      color: 'white',
+                                      transform: 'scale(1.1)' 
+                                    },
+                                    transition: 'all 0.2s ease-in-out',
+                                    ...(editingTask === task._id && {
+                                      animation: 'pulse 1.5s infinite',
+                                      '@keyframes pulse': {
+                                        '0%': { opacity: 1 },
+                                        '50%': { opacity: 0.7 },
+                                        '100%': { opacity: 1 }
+                                      }
+                                    })
+                                  }}
                                 >
                                   <EditIcon />
                                 </IconButton>
                               </Tooltip>
                             </>
                           )}
-                          {task.status === 'PENDING' && (
+                          {(task.status === 'PENDING' || task.status === 'STOPPED') && (
                             <Tooltip title="Resume Task">
                               <IconButton
                                 size="small"
@@ -535,7 +560,7 @@ const TasksPage: React.FC = () => {
                               </IconButton>
                             </Tooltip>
                           )}
-                          {(task.status === 'RUNNING' || task.status === 'PENDING') && (
+                          {(task.status === 'RUNNING' || task.status === 'PENDING' || task.status === 'STOPPED') && (
                             <Tooltip title="Delete Task">
                               <IconButton
                                 size="small"
@@ -619,14 +644,18 @@ const TasksPage: React.FC = () => {
                               <Paper 
                                 sx={{ 
                                   p: 2, 
-                                  bgcolor: 'grey.100', 
+                                  backgroundColor: '#f5f5f5',
+                                  color: '#333333',
                                   fontFamily: 'monospace',
                                   fontSize: '0.75rem',
                                   overflow: 'auto',
-                                  maxHeight: 300
+                                  maxHeight: 300,
+                                  border: '1px solid #e0e0e0'
                                 }}
                               >
-                                <pre>{JSON.stringify(task.context, null, 2)}</pre>
+                                <pre style={{ margin: 0, color: '#333333' }}>
+                                  {JSON.stringify(task.context, null, 2)}
+                                </pre>
                               </Paper>
                             )}
                           </Box>

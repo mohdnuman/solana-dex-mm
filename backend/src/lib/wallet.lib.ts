@@ -2,6 +2,7 @@ import _ from "lodash";
 
 import mongoLib from "./mongo.lib";
 import solanaLib from "./solana.lib";
+import encryptionLib from "./encryption.lib";
 
 import walletModel from "../model/wallet.model";
 import walletGroupModel from "../model/wallet.group.model";
@@ -103,7 +104,7 @@ async function createWalletGroup(name: string, numberOfWallets: number) {
                     update: {
                         $set: {
                             address: wallet.address,
-                            privateKey: wallet.privateKey,
+                            encryptedPrivateKey: encryptionLib.encrypt(wallet.privateKey),
                             walletGroupId: walletGroup._id
                         }
                     },

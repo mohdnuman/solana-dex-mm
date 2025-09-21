@@ -33,6 +33,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   ContentCopy as ContentCopyIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { walletApi, type WalletGroup, type Wallet } from '../services/api';
 
@@ -140,14 +141,24 @@ const WalletsPage: React.FC = () => {
         <Typography variant="h4" component="h1" fontWeight={600}>
           Wallet Management
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setShowCreateForm(true)}
-          sx={{ borderRadius: 2 }}
-        >
-          Create Group
-        </Button>
+        <Box display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => fetchWalletGroups()}
+            sx={{ borderRadius: 2 }}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setShowCreateForm(true)}
+            sx={{ borderRadius: 2 }}
+          >
+            Create Group
+          </Button>
+        </Box>
       </Box>
 
       <Dialog 

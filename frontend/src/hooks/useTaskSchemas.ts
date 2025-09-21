@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { taskApi, type TaskSchema, type ValidationError } from '../services/api';
 
 // Available task types from backend enum
-const TASK_TYPES = ['MIXER', 'MAKER', 'HOLDER', 'VOLUME'];
+const TASK_TYPES = ['MIXER', 'MAKER', 'HOLDER', 'VOLUME','SWEEP'];
 
 export const useTaskSchemas = () => {
   const [schemas, setSchemas] = useState<{ [key: string]: TaskSchema }>({});

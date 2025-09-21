@@ -7,7 +7,7 @@ const walletSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    privateKey: {
+    encryptedPrivateKey: {
         type: String,
         required: true
     },

@@ -11,6 +11,7 @@ import loggerLib from "../../lib/logger.lib";
 import solanaLib from "../../lib/solana.lib";
 import walletLib from "../../lib/wallet.lib";
 import dexInterface from "../../dex/interface.dex";
+import encryptionLib from "../../lib/encryption.lib";
 
 import taskStatusEnum from "../../enum/task.status.enum";
 
@@ -37,11 +38,9 @@ class HolderTask {
 
             const {
                 masterWalletAddress,
-                amountToTransfer,
-                amountToSwap,
                 walletGroupId
             } = context;
-            if (_.isNil(masterWalletAddress) || _.isNil(amountToTransfer) || _.isNil(amountToSwap) || _.isNil(walletGroupId)) {
+            if (_.isNil(masterWalletAddress) || _.isNil(walletGroupId)) {
                 throw new Error(`Invalid task context! ${JSON.stringify(context)}`);
             }
 
@@ -55,31 +54,67 @@ class HolderTask {
                 throw new Error(`Master wallet not found! address: ${masterWalletAddress}`);
             }
 
+            const masterWalletPrivateKey=encryptionLib.decrypt(masterWallet.encryptedPrivateKey)
             for (const wallet of wallets) {
-                const fundingTransactionHash = await solanaLib.transferSol(
-                    masterWallet.privateKey,
-                    wallet.address,
-                    amountToTransfer,
-                );
-                loggerLib.logInfo({
-                    message: "Holder wallet funded!",
-                    address: wallet.address,
-                    amountSol: amountToTransfer,
-                    transactionHash: fundingTransactionHash,
-                })
+                const task = await taskLib.getTask(this.id);
+                const {context} = task;
+                if (_.isEmpty(context)) {
+                    throw new Error(`Task context is empty! taskId: ${this.id}`);
+                }
 
-                const buyTransactionHash = await dexInterface.buy(
-                    dex,
-                    poolAddress,
+                const {
+                    amountToTransfer,
                     amountToSwap,
-                    wallet.privateKey,
-                );
-                loggerLib.logInfo({
-                    message: "Holder wallet bought!",
-                    address: wallet.address,
-                    amount: amountToSwap,
-                    transactionHash: buyTransactionHash,
-                });
+                } = context;
+                if (_.isNil(amountToTransfer) || _.isNil(amountToSwap)) {
+                    throw new Error(`Invalid task context! ${JSON.stringify(context)}`);
+                }
+
+                try {
+                    const fundingTransactionHash = await solanaLib.transferSol(
+                        masterWalletPrivateKey,
+                        wallet.address,
+                        amountToTransfer,
+                    );
+                    loggerLib.logInfo({
+                        message: "Holder wallet funded!",
+                        address: wallet.address,
+                        amountSol: amountToTransfer,
+                        transactionHash: fundingTransactionHash,
+                    })
+                } catch (error) {
+                    loggerLib.logError({
+                        message: "Failed to fund holder wallet!",
+                        address: wallet.address,
+                        amountSol: amountToTransfer,
+                        // @ts-ignore
+                        error: error.message,
+                    })
+                    continue;
+                }
+
+                try {
+                    const buyTransactionHash = await dexInterface.buy(
+                        dex,
+                        poolAddress,
+                        amountToSwap,
+                        encryptionLib.decrypt(wallet.encryptedPrivateKey),
+                    );
+                    loggerLib.logInfo({
+                        message: "Holder wallet bought!",
+                        address: wallet.address,
+                        amount: amountToSwap,
+                        transactionHash: buyTransactionHash,
+                    });
+                } catch (error) {
+                    loggerLib.logError({
+                        message: "Failed to buy!",
+                        address: wallet.address,
+                        amount: amountToSwap,
+                        // @ts-ignore
+                        error: error.message,
+                    })
+                }
             }
 
             await taskLib.updateTask(taskId, {status: taskStatusEnum.COMPLETED});

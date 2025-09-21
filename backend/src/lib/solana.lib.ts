@@ -275,7 +275,9 @@ async function transferSol(sourceWalletPrivateKey: string, destinationWalletAddr
         ]);
 
         const connection = getConnection();
-        return await connection.sendTransaction(transaction);
+        return await connection.sendTransaction(transaction,{
+            skipPreflight: true
+        });
     } catch (error) {
         throw error;
     }
