@@ -6,9 +6,10 @@ A sophisticated market making and trading automation platform for Solana DEXs, f
 
 ### Trading Automation
 - **Volume Generation**: Programmatic trading to enhance token liquidity metrics
-- **Token Mixing**: Advanced transaction mixing for privacy and distribution
-- **Sweep Operations**: Automated token consolidation across wallets
-- **Holder Simulation**: Automated wallet creation and token distribution
+- **SOL Mixing**: Advanced SOL mixing for privacy and distribution
+- **Sweep Operations**: Automated SOL consolidation from multiple wallets
+- **Holder Simulation**: Increase holder counts with realistic patterns
+- **Makers Simulation**: Boost maker counts with configurable strategies
 
 ### Platform Integration
 - **Raydium CLMM**: Full integration with Raydium's Concentrated Liquidity Market Maker
