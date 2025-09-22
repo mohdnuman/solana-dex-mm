@@ -7,6 +7,7 @@ import loggerLib from "../lib/logger.lib";
 import solanaLib from "../lib/solana.lib";
 import configLib from "../lib/config.lib";
 
+import globalConst from "../const/global.const";
 import walletModel from "../model/wallet.model";
 import walletGroupModel from "../model/wallet.group.model";
 
@@ -23,7 +24,13 @@ class WalletBalanceUpdator {
                     continue;
                 }
 
-                for (const walletGroup of walletGroups) {
+                const nonMixingWalletGroups = walletGroups.filter((wg: any) => !wg.name.startsWith(globalConst.MIXING_WALLET_GROUP_NAME_PREFIX));
+                if (_.isEmpty(nonMixingWalletGroups)) {
+                    await helperLib.sleep(SLEEP_TIME_IN_MS);
+                    continue;
+                }
+
+                for (const walletGroup of nonMixingWalletGroups) {
                     const {id} = walletGroup;
                     const wallets = await walletLib.getWallets(id);
                     const walletAddresses = wallets.map((wallet: any) => wallet.address);

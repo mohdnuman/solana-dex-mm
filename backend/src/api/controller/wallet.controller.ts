@@ -3,12 +3,17 @@ import _ from "lodash";
 import walletLib from "../../lib/wallet.lib";
 import loggerLib from "../../lib/logger.lib";
 
+import globalConst from "../../const/global.const";
+
 async function getWalletGroups(req: any, res: any) {
     try {
         const walletGroups = await walletLib.getWalletGroups();
+
+        const nonMixingWalletGroups = walletGroups.filter((wg: any) => !wg.name.startsWith(globalConst.MIXING_WALLET_GROUP_NAME_PREFIX));
+
         return res.status(200).json({
             message: `Wallet groups fetched successfully!`,
-            walletGroups: walletGroups
+            walletGroups: nonMixingWalletGroups
         });
     } catch (error: any) {
         loggerLib.logError(error);

@@ -38,17 +38,17 @@ const taskSchemas: any = {
             description: 'Master wallet address that funds and receives profits',
             example: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'
         },
-        amountToTransfer: {
+        minAmountToBuy: {
             type: 'number',
             required: true,
-            description: 'Amount of SOL to transfer to each maker wallet',
+            description: 'Minimum amount of SOL to swap for tokens',
             min: 0,
-            example: 0.1
+            example: 0.01
         },
-        amountToSwap: {
+        maxAmountToBuy: {
             type: 'number',
             required: true,
-            description: 'Amount of SOL to swap for tokens',
+            description: 'Maximum amount of SOL to swap for tokens',
             min: 0,
             example: 0.05
         },
@@ -66,17 +66,17 @@ const taskSchemas: any = {
             description: 'Master wallet address that funds the holder wallets',
             example: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'
         },
-        amountToTransfer: {
+        minAmountToBuy: {
             type: 'number',
             required: true,
-            description: 'Amount of SOL to transfer to each holder wallet',
+            description: 'Minimum amount of SOL to swap for tokens',
             min: 0,
-            example: 0.1
+            example: 0.01
         },
-        amountToSwap: {
+        maxAmountToBuy: {
             type: 'number',
             required: true,
-            description: 'Amount of SOL to swap for tokens to hold',
+            description: 'Maximum amount of SOL to swap for tokens',
             min: 0,
             example: 0.05
         },
@@ -88,6 +88,12 @@ const taskSchemas: any = {
         }
     },
     [taskTypeEnum.MIXER]: {
+        masterWalletAddress: {
+            type: 'string',
+            required: true,
+            description: 'Master wallet address that funds the wallets',
+            example: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'
+        },
         amountPerWallet: {
             type: 'number',
             required: true,
@@ -105,7 +111,7 @@ const taskSchemas: any = {
         masterWalletAddress: {
             type: 'string',
             required: true,
-            description: 'Master wallet address that funds the holder wallets',
+            description: 'Master wallet address that receives the funds',
             example: '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'
         },
         walletGroupId: {

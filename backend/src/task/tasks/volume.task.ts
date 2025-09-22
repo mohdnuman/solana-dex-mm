@@ -1,5 +1,6 @@
 import _ from "lodash";
 import path from "path";
+import util from "util";
 import dotenv from "dotenv";
 
 dotenv.config({path: path.join(__dirname, "/../../.env")});
@@ -176,7 +177,7 @@ class VolumeTask {
     } catch (error) {
         loggerLib.logError(error);
         // @ts-ignore
-        await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
+        await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: util.inspect(error)});
         await taskLib.removeTaskFromPm2(taskId);
     }
 })();
@@ -185,13 +186,13 @@ process.on("unhandledRejection", async (error) => {
     loggerLib.logError(`Unhandled promise rejection!`);
     loggerLib.logError(error);
     // @ts-ignore
-    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
+    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason:util.inspect(error)});
     await taskLib.removeTaskFromPm2(taskId);
 });
 
 process.on("uncaughtException", async (error) => {
     loggerLib.logError(`Uncaught exception!`);
     loggerLib.logError(error);
-    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
+    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: util.inspect(error)});
     await taskLib.removeTaskFromPm2(taskId);
 });

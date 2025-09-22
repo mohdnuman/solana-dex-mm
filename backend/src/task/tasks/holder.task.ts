@@ -1,5 +1,6 @@
 import _ from "lodash";
 import path from "path";
+import util from "util";
 import dotenv from "dotenv";
 
 dotenv.config({path: path.join(__dirname, "/../../.env")});
@@ -14,9 +15,12 @@ import dexInterface from "../../dex/interface.dex";
 import encryptionLib from "../../lib/encryption.lib";
 
 import taskStatusEnum from "../../enum/task.status.enum";
+import helperLib from "../../lib/helper.lib";
 
 const args = process.argv.slice(2);
 const taskId = args[0] as string;
+
+const AMOUNT_OF_SOL_FOR_GAS_AND_ACCOUNT_INITIALIZATION = 0.005
 
 class HolderTask {
     id: string = "";
@@ -63,30 +67,32 @@ class HolderTask {
                 }
 
                 const {
-                    amountToTransfer,
-                    amountToSwap,
+                    minAmountToBuy,
+                    maxAmountToBuy,
                 } = context;
-                if (_.isNil(amountToTransfer) || _.isNil(amountToSwap)) {
+                if (_.isNil(minAmountToBuy) || _.isNil(maxAmountToBuy)) {
                     throw new Error(`Invalid task context! ${JSON.stringify(context)}`);
                 }
+
+                const amountToBuy=helperLib.getRandomValue(minAmountToBuy,maxAmountToBuy)
 
                 try {
                     const fundingTransactionHash = await solanaLib.transferSol(
                         masterWalletPrivateKey,
                         wallet.address,
-                        amountToTransfer,
+                        amountToBuy+AMOUNT_OF_SOL_FOR_GAS_AND_ACCOUNT_INITIALIZATION,
                     );
                     loggerLib.logInfo({
                         message: "Holder wallet funded!",
                         address: wallet.address,
-                        amountSol: amountToTransfer,
+                        amountSol: amountToBuy+AMOUNT_OF_SOL_FOR_GAS_AND_ACCOUNT_INITIALIZATION,
                         transactionHash: fundingTransactionHash,
                     })
                 } catch (error) {
                     loggerLib.logError({
                         message: "Failed to fund holder wallet!",
                         address: wallet.address,
-                        amountSol: amountToTransfer,
+                        amountSol: amountToBuy+AMOUNT_OF_SOL_FOR_GAS_AND_ACCOUNT_INITIALIZATION,
                         // @ts-ignore
                         error: error.message,
                     })
@@ -97,20 +103,20 @@ class HolderTask {
                     const buyTransactionHash = await dexInterface.buy(
                         dex,
                         poolAddress,
-                        amountToSwap,
+                        amountToBuy,
                         encryptionLib.decrypt(wallet.encryptedPrivateKey),
                     );
                     loggerLib.logInfo({
                         message: "Holder wallet bought!",
                         address: wallet.address,
-                        amount: amountToSwap,
+                        amount: amountToBuy,
                         transactionHash: buyTransactionHash,
                     });
                 } catch (error) {
                     loggerLib.logError({
                         message: "Failed to buy!",
                         address: wallet.address,
-                        amount: amountToSwap,
+                        amount: amountToBuy,
                         // @ts-ignore
                         error: error.message,
                     })
@@ -137,7 +143,7 @@ class HolderTask {
     } catch (error) {
         loggerLib.logError(error);
         // @ts-ignore
-        await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
+        await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: util.inspect(error)});
         await taskLib.removeTaskFromPm2(taskId);
     }
 })();
@@ -146,7 +152,7 @@ process.on("unhandledRejection", async (error) => {
     loggerLib.logError(`Unhandled promise rejection!`);
     loggerLib.logError(error);
     // @ts-ignore
-    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
+    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason:util.inspect(error)});
     await taskLib.removeTaskFromPm2(taskId);
 });
 
@@ -154,6 +160,6 @@ process.on("uncaughtException", async (error) => {
     loggerLib.logError(`Uncaught exception!`);
     loggerLib.logError(error);
     // @ts-ignore
-    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason: error.message});
+    await taskLib.updateTask(taskId, {status: taskStatusEnum.FAILED, failureReason:util.inspect(error)});
     await taskLib.removeTaskFromPm2(taskId);
 });

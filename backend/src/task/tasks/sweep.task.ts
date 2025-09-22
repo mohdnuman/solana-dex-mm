@@ -1,5 +1,6 @@
 import _ from "lodash";
 import path from "path";
+import util from "util";
 import dotenv from "dotenv";
 
 dotenv.config({path: path.join(__dirname, "/../../.env")});
@@ -119,7 +120,7 @@ class SweepTask {
         await taskLib.updateTask(taskId, {
             status: taskStatusEnum.FAILED,
             //@ts-ignore
-            failureReason: error.message,
+            failureReason: util.inspect(error),
         });
         await taskLib.removeTaskFromPm2(taskId);
     }
@@ -131,7 +132,7 @@ process.on("unhandledRejection", async (error) => {
     await taskLib.updateTask(taskId, {
         status: taskStatusEnum.FAILED,
         //@ts-ignore
-        failureReason: error.message,
+        failureReason:util.inspect(error),
     });
     await taskLib.removeTaskFromPm2(taskId);
 });
@@ -142,7 +143,7 @@ process.on("uncaughtException", async (error) => {
     //@ts-ignore
     await taskLib.updateTask(taskId, {
         status: taskStatusEnum.FAILED,
-        failureReason: error.message,
+        failureReason: util.inspect(error),
     });
     await taskLib.removeTaskFromPm2(taskId);
 });
