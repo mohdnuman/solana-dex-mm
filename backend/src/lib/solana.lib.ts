@@ -11,7 +11,7 @@ import {
     SystemProgram,
     LAMPORTS_PER_SOL,
     TransactionMessage,
-    VersionedTransaction,
+    VersionedTransaction, ComputeBudgetProgram,
 } from "@solana/web3.js";
 
 import globalLib from "./global.lib";
@@ -264,18 +264,32 @@ async function transferSol(sourceWalletPrivateKey: string, destinationWalletAddr
         }
 
         const sourcePayer = getPayer(sourceWalletPrivateKey);
-        const instruction = getSolTransferInstruction(
+        const computeBudgetPriceInstruction =
+            ComputeBudgetProgram.setComputeUnitPrice({
+                microLamports: 200_000,
+            });
+        const computeBudgetLimitInstruction =
+            ComputeBudgetProgram.setComputeUnitLimit({
+                units: 200_000,
+            });
+        const solTransferInstruction = getSolTransferInstruction(
             sourcePayer.publicKey.toBase58(),
             destinationWalletAddress,
             amount,
         );
 
-        const transaction = await getSignedTransaction([instruction], sourcePayer, [
+        const transaction = await getSignedTransaction(
+            [
+                computeBudgetLimitInstruction,
+                computeBudgetPriceInstruction,
+                solTransferInstruction
+            ],
             sourcePayer,
-        ]);
+            [sourcePayer]
+        );
 
         const connection = getConnection();
-        return await connection.sendTransaction(transaction,{
+        return await connection.sendTransaction(transaction, {
             skipPreflight: true
         });
     } catch (error) {

@@ -6,7 +6,6 @@ import dotenv from "dotenv";
 import {
     PublicKey,
     ComputeBudgetProgram,
-
 } from "@solana/web3.js";
 import {
     createAssociatedTokenAccountInstruction,

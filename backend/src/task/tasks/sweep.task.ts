@@ -2,6 +2,9 @@ import _ from "lodash";
 import path from "path";
 import util from "util";
 import dotenv from "dotenv";
+import {
+    ComputeBudgetProgram,
+} from "@solana/web3.js";
 
 dotenv.config({path: path.join(__dirname, "/../../.env")});
 
@@ -73,6 +76,15 @@ class SweepTask {
                 let solBalance = await solanaLib.getBatchSolBalance([wallet.address]);
                 solBalance = solBalance[0];
 
+
+                const computeBudgetPriceInstruction =
+                    ComputeBudgetProgram.setComputeUnitPrice({
+                        microLamports: 200_000,
+                    });
+                const computeBudgetLimitInstruction =
+                    ComputeBudgetProgram.setComputeUnitLimit({
+                        units: 200_000,
+                    });
                 const solTransferInstruction = solanaLib.getSolTransferInstruction(
                     wallet.address,
                     masterWalletAddress,
@@ -80,7 +92,11 @@ class SweepTask {
                 );
 
                 const solSweepingTransaction = await solanaLib.getSignedTransaction(
-                    [solTransferInstruction],
+                    [
+                        computeBudgetPriceInstruction,
+                        computeBudgetLimitInstruction,
+                        solTransferInstruction
+                    ],
                     masterPayer,
                     [masterPayer, walletPayer],
                 );
@@ -132,7 +148,7 @@ process.on("unhandledRejection", async (error) => {
     await taskLib.updateTask(taskId, {
         status: taskStatusEnum.FAILED,
         //@ts-ignore
-        failureReason:util.inspect(error),
+        failureReason: util.inspect(error),
     });
     await taskLib.removeTaskFromPm2(taskId);
 });
